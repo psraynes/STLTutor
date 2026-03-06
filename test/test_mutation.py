@@ -108,6 +108,32 @@ class TestConceptualMutator(unittest.TestCase):
                     )
                     self.assertIn(result, expected_outputs)
 
+    def test_get_all_applicable_misconceptions_randomizes_rewrite_location(self):
+        """
+        Ensure distractor generation can apply a misconception at different valid
+        rewrite sites (not only the first match).
+        """
+        ast = parse_ltl_string("G(F(a))")
+        results_seen = set()
+
+        for i in range(NUM_DIVERSITY_ITERATIONS):
+            with self.subTest(iteration=i):
+                all_results = codebook.getAllApplicableMisconceptions(ast)
+                bq_results = [
+                    str(result.node)
+                    for result in all_results
+                    if result.misconception == codebook.MisconceptionCode.BadStateQuantification
+                ]
+                self.assertEqual(len(bq_results), 1)
+                self.assertIn(bq_results[0], {"(F (F a))", "(G (G a))"})
+                results_seen.add(bq_results[0])
+
+        self.assertGreater(
+            len(results_seen),
+            1,
+            f"Only saw {results_seen} across {NUM_DIVERSITY_ITERATIONS} attempts.",
+        )
+
     def test_exclusive_u(self):
         test_cases = [
             ("(x U ((! x) & y))", "(x U y)"),

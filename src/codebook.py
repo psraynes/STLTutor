@@ -149,30 +149,38 @@ class MutationResult:
         self.misconception = misconception
 
 
-def applyMisconception(node_orig, misconception):
+def applyMisconception(node_orig, misconception, randomize_location=False):
+    """
+    Apply a misconception rewrite to a formula tree.
+
+    By default this preserves the historical first-match traversal behavior.
+    When `randomize_location=True`, rewrites (except ImplicitF/ImplicitG, which
+    are always random-site) are applied at a random applicable location.
+    """
 
     ## First copy everything so we don't mess up the original node.
     node = copy.deepcopy(node_orig)
+    apply_at_location = applyTilFirstRandom if randomize_location else applyTilFirst
 
 
     if misconception == MisconceptionCode.Precedence:
-        return applyTilFirst(node, applyPrecedence)
+        return apply_at_location(node, applyPrecedence)
     elif misconception == MisconceptionCode.BadStateIndex:
-        return applyTilFirst(node, applyBadStateIndex)
+        return apply_at_location(node, applyBadStateIndex)
     elif misconception == MisconceptionCode.BadStateQuantification:
-        return applyTilFirst(node, applyBadStateQuantification)
+        return apply_at_location(node, applyBadStateQuantification)
     elif misconception == MisconceptionCode.ExclusiveU:
-        return applyTilFirst(node, applyExclusiveU)
+        return apply_at_location(node, applyExclusiveU)
     elif misconception == MisconceptionCode.ImplicitF:
         return applyTilFirstRandom(node, applyImplicitF)
     elif misconception == MisconceptionCode.ImplicitG:
         return applyTilFirstRandom(node, applyImplicitG)
     elif misconception == MisconceptionCode.WeakU:
-        return applyTilFirst(node, applyWeakU)
+        return apply_at_location(node, applyWeakU)
     elif misconception == MisconceptionCode.OtherImplicit:
-        res = applyTilFirst(node, applyImplicitPrefix)
+        res = apply_at_location(node, applyImplicitPrefix)
         if not res.misconception:
-            return applyTilFirst(node, applyUnderconstraint)
+            return apply_at_location(node, applyUnderconstraint)
         return res
     # elif misconception in [MisconceptionCode.BadProp, MisconceptionCode.Unlabeled, MisconceptionCode.ReasonableVariant]:
     #     return MutationResult(node)
@@ -187,7 +195,9 @@ def getAllApplicableMisconceptions(node):
         as_str = str(n)
         return LTLNode.equiv(formula, as_str)
 
-    xs = [        applyMisconception(node, misconception)    for misconception in MisconceptionCode]
+    # Use randomized location application so distractor generation is not
+    # systematically biased toward first-match rewrite sites.
+    xs = [applyMisconception(node, misconception, randomize_location=True) for misconception in MisconceptionCode]
     xs = [ x  for x in xs if (x is not None and x.misconception is not None) ]
     
     xs = [ x  for x in xs if not equivalentToOriginal(x.node) ]
@@ -208,8 +218,9 @@ def collectAllMutationLocations(node, f, path=None):
     
     locations = []
     
-    # Try applying the mutation at current node
-    res = f(node)
+    # Probe applicability on a copy since some mutation functions mutate input
+    # nodes while constructing their result.
+    res = f(copy.deepcopy(node))
     if res.misconception:
         # Store just the path, we'll apply the mutation later
         locations.append(list(path))
