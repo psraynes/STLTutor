@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="{{ url_for('static', filename='js/tracerenderer.js') }}"></script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -41,12 +41,126 @@
             justify-content: center;
         }
 
-        /* Center align .mermaid divs */
-        #statecontainer .mermaid {
+        .trace-svg-container {
+            overflow-x: auto;
             margin: 0 auto;
-            /* Centers the div within its flex container */
-            display: block;
-            /* Ensures the div is treated as a block-level element */
+        }
+
+        .formula-tree-scroll {
+            max-height: 440px;
+            overflow: auto;
+            padding-right: 0.25rem;
+        }
+
+        .formula-tree-stage {
+            width: max-content;
+            min-width: 100%;
+            padding: 0.35rem 0.5rem 0.2rem;
+        }
+
+        /* Formula tree as a standard top-down AST with connectors */
+        .formula-tree,
+        .formula-tree ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .formula-tree {
+            display: table;
+            margin: 0 auto;
+        }
+
+        .formula-tree ul {
+            display: table;
+            margin: 0 auto;
+            position: relative;
+            padding-top: 20px;
+        }
+
+        .formula-tree li {
+            display: table-cell;
+            text-align: center;
+            vertical-align: top;
+            position: relative;
+            padding: 20px 8px 0 8px;
+        }
+
+        .formula-tree li::before,
+        .formula-tree li::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            width: 50%;
+            height: 20px;
+            border-top: 2px solid #cbd5e1;
+        }
+
+        .formula-tree li::before {
+            left: 0;
+        }
+
+        .formula-tree li::after {
+            right: 0;
+            border-left: 2px solid #cbd5e1;
+        }
+
+        .formula-tree li:only-child {
+            padding-top: 0;
+        }
+
+        .formula-tree li:only-child::before,
+        .formula-tree li:only-child::after {
+            display: none;
+        }
+
+        .formula-tree li:first-child::before,
+        .formula-tree li:last-child::after {
+            border: 0;
+        }
+
+        .formula-tree li:last-child::before {
+            border-right: 2px solid #cbd5e1;
+            border-radius: 0 6px 0 0;
+        }
+
+        .formula-tree li:first-child::after {
+            border-radius: 6px 0 0 0;
+        }
+
+        .formula-tree ul::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 0;
+            height: 20px;
+            border-left: 2px solid #cbd5e1;
+        }
+
+        .formula-tree li > code {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.88em;
+            white-space: nowrap;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+        }
+
+        .formula-tree > li > code {
+            font-size: 0.95em;
+            font-weight: 700;
+        }
+
+        .formula-tree .tree-sat > code {
+            border: 2px solid #0b4ea2;
+            background-color: #eff6ff;
+            color: #0b4ea2;
+        }
+        .formula-tree .tree-unsat > code {
+            border: 2px dashed #d97706;
+            background-color: #fffbeb;
+            color: #92400e;
         }
 
         .cycle-state-col {
@@ -59,33 +173,29 @@
         }
 
         .satformula {
-            border: 2px dashed #28a745;
-            /* green dashed border */
+            border: 2px solid #0b4ea2;
             border-radius: 6px;
             padding: 4px 8px;
-            color: #155724;
-
+            color: #0b4ea2;
             display: inline-block;
         }
 
         .unsatformula {
-
-            border: 2px solid #dc3545;
-            /* red solid border */
+            border: 2px dashed #d97706;
             border-radius: 6px;
             padding: 4px 8px;
-
+            color: #92400e;
             display: inline-block;
         }
 
         /* Matrix view text colors */
         .matrix-satisfied {
-            color: #28a745 !important;
+            color: #0b4ea2 !important;
             font-weight: bold;
         }
 
         .matrix-unsatisfied {
-            color: #dc3545 !important;
+            color: #d97706 !important;
             font-weight: bold;
         }
 
@@ -214,29 +324,21 @@
 
                 <div id="statecontainer">
                     {% for ps in prefixstates + cyclestates %}
+                    {% set step_idx = loop.index0 %}
                     <div class="container stepper-container">
 
                         <div class="formula-tree-container mt-2">
-                            <h4><span class="help float-right"> This tree represents the formula <code> {{formula}} </code>,
-                                    structuring its sub-formulae in a hierarchical manner. Each node in the tree is
-                                    represented
-                                    by a green box if it is satisfied, and an orange box with two lines if it is not
-                                    satisfied.</span> </h4>
-
-                            <div>
-                                <pre class="mermaid" id="{{ps.id}}tree"> {{ ps.treeAsMermaid | safe}}  </pre>
+                            <div class="formula-tree-scroll">
+                                <div class="formula-tree-stage">
+                                    {{ ps.formulaTreeAsHTML | safe }}
+                                </div>
                             </div>
                         </div>
 
                         <hr>
 
                         <div class="trace-container mt-2">
-                            <h4><span class="help float-right"> By clicking the <code>Previous State</code> and <code>Next
-                                    State</code>
-                                    buttons, you can examine the formula's satisfaction at different points in this
-                                    trace.
-                                </span></h4>
-                            <pre class="mermaid" id="{{ps.id}}trace">{{ ps.traceAsMermaid | safe }}</pre>
+                            <div class="trace-svg-container" data-step-index="{{ step_idx }}"></div>
                             <br>
                             <div class="btn-group d-flex justify-content-center" role="group">
                                 <button class="prev btn btn-primary" title="Previous State"><i
@@ -379,26 +481,8 @@
     <script>
         $(document).ready(function () {
 
-            //mermaid.initialize({ startOnLoad: true });
-            mermaid.initialize({ startOnLoad: false });
-            const ui_load_timeout_delay = 150;
-            function renderMermaidDiagram(graphElements) {
-
-                mermaid.run({
-                    nodes: graphElements
-                }).then((data) => {
-                    graphElements.forEach(function (element) {
-                        let $element = $(element);
-                        $element.width($element.find('svg').css('max-width'));
-                    });
-
-
-                }).catch((err) => {
-                    console.error("Error rendering mermaid diagram");
-                    console.error(err);
-                });
-            };
-
+            // Trace data for SVG renderer (shared across all stepper steps)
+            var traceData = {{ trace_render_data | safe }};
 
             const stepperContainers = Array.from(document.querySelectorAll('.stepper-container'));
             const progressLabel = document.getElementById('stepperProgress');
@@ -411,6 +495,26 @@
 
             if (!stepperContainers.length) {
                 return;
+            }
+
+            function renderTraceForContainer(stepContainer) {
+                if (!stepContainer) {
+                    return;
+                }
+
+                const traceContainer = stepContainer.querySelector('.trace-svg-container');
+                if (!traceContainer) {
+                    return;
+                }
+
+                const stepIndex = parseInt(traceContainer.dataset.stepIndex, 10);
+                try {
+                    TraceRenderer.render(traceContainer, traceData, {
+                        highlightIndex: Number.isNaN(stepIndex) ? 0 : stepIndex
+                    });
+                } catch (error) {
+                    console.error('Failed to render stepper trace diagram', error);
+                }
             }
 
             stepperContainers.forEach((container, index) => {
@@ -437,15 +541,6 @@
                         nextButton.disabled = index === stepperContainers.length - 1;
                     }
                 });
-            }
-
-            function renderDiagrams() {
-                const activeContainer = stepperContainers[currentIndex];
-                if (!activeContainer) {
-                    return;
-                }
-                let to_render = activeContainer.querySelectorAll('.mermaid');
-                renderMermaidDiagram(to_render);
             }
 
             function flashTree(container) {
@@ -475,6 +570,7 @@
                 requestAnimationFrame(() => {
                     enteringContainer.classList.add('active-step');
                     enteringContainer.classList.remove('leaving-step');
+                    renderTraceForContainer(enteringContainer);
                 });
 
                 setTimeout(() => {
@@ -484,7 +580,6 @@
                 }, transitionDuration);
 
                 currentIndex = newIndex;
-                renderDiagrams();
                 setButtonState();
                 updateProgress();
                 flashTree(enteringContainer);
@@ -505,8 +600,8 @@
             // Initialize first view
             stepperContainers[0].style.display = 'block';
             stepperContainers[0].classList.add('active-step');
+            renderTraceForContainer(stepperContainers[0]);
             flashTree(stepperContainers[0]);
-            renderDiagrams();
             setButtonState();
             updateProgress();
 
@@ -544,8 +639,15 @@
             $('#stepperTabs a[data-toggle="tab"]').on('shown.bs.tab', function (event) {
                 isStepperActive = event.target === stepperTab;
                 if (isStepperActive) {
-                    renderDiagrams();
+                    renderTraceForContainer(stepperContainers[currentIndex]);
                 }
+            });
+
+            window.addEventListener('resize', function () {
+                if (!isStepperActive) {
+                    return;
+                }
+                renderTraceForContainer(stepperContainers[currentIndex]);
             });
         });
     </script>
