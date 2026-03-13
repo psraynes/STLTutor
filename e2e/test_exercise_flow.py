@@ -15,7 +15,7 @@ from playwright.sync_api import expect
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _load_prebuilt_exercise(page, base_url, exercise_file="robotrain.json"):
+def _load_prebuilt_exercise(page, base_url, exercise_file="equivalent.json"):
     """Navigate to the predefined exercise page for a prebuilt JSON file."""
     page.goto(f"{base_url}/exercise/predefined?sourceuri=preload:{exercise_file}")
     page.wait_for_selector("#questions")
@@ -44,7 +44,7 @@ def _answer_and_advance(page):
     """Select the first radio option, check the answer, then click Next."""
     visible = page.locator(".question:visible")
     # Remember the current question number so we can detect advance
-    text = visible.locator("small.text-muted").inner_text()
+    text = visible.locator(".question-counter").inner_text()
     m = re.search(r"Question (\d+) of (\d+)", text)
     current_q = int(m.group(1))
     total_q = int(m.group(2))
@@ -66,7 +66,7 @@ def _answer_and_advance(page):
             f"""(() => {{
                 const vis = document.querySelector('.question:not([style*="display: none"])');
                 if (!vis) return false;
-                const t = vis.querySelector('small.text-muted')?.textContent || '';
+                const t = vis.querySelector('.question-counter')?.textContent || '';
                 const m = t.match(/Question (\\d+) of/);
                 return m && parseInt(m[1]) > {current_q};
             }})()""",
