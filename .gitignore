@@ -21,6 +21,8 @@ out
 
 # Ignore virtual environment
 venv/
+# Ignore Conda environment
+.stltutor/
 # Ignore pycache
 __pycache__/
 # Ignore database files
