@@ -1,0 +1,4 @@
+Install antlr4-tools
+    Required code changes to antlr4-tools library: see https://github.com/antlr/antlr4-tools/issues/22
+
+Use antlr4 command to generate parser, lexer, and listener: antlr4 -Dlanguage=Python3 ltl.g4 -listener

@@ -17,7 +17,7 @@ import time
 # Add src to path for LTL parsing and equivalence checking
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from ltlnode import parse_ltl_string
+from ltl.ltlnode import parse_ltl_string
 from spotutils import areEquivalent
 import spot
 

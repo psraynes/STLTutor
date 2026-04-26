@@ -18,8 +18,8 @@ import random
 # Add src to path for LTL Tutor imports
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from ltlnode import parse_ltl_string
-import ltltoeng
+from ltl.ltlnode import parse_ltl_string
+import ltl.ltltoeng as ltltoeng
 import spot
 import codebook
 

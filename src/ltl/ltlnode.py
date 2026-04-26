@@ -10,13 +10,13 @@ import random
 from spotutils import areEquivalent
 
 
-from ltlListener import ltlListener
+from ltl.ltlListener import ltlListener
 from antlr4 import CommonTokenStream, ParseTreeWalker
 from antlr4 import ParseTreeWalker, CommonTokenStream, InputStream
-from ltlLexer import ltlLexer
-from ltlParser import ltlParser
+from ltl.ltlLexer import ltlLexer
+from ltl.ltlParser import ltlParser
 from abc import ABC, abstractmethod
-import ltltoeng
+import ltl.ltltoeng as ltltoeng
 
 
 SUPPORTED_SYNTAXES = ['Classic', 'Forge', 'Electrum']

@@ -1,5 +1,5 @@
-from ltlnode import UnaryOperatorNode, BinaryOperatorNode, LiteralNode, parse_ltl_string
-import ltltoeng
+from ltl.ltlnode import UnaryOperatorNode, BinaryOperatorNode, LiteralNode, parse_ltl_string
+import ltl.ltltoeng as ltltoeng
 from spotutils import is_trace_satisfied
 import re
 import random

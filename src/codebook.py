@@ -1,6 +1,6 @@
 from enum import Enum
 import random
-from ltlnode import *
+from ltl.ltlnode import *
 import copy
 import spotutils
 

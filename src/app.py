@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, Blueprint, jsonify, redirect,
 from flask_login import login_required, current_user
 
 
-from ltlnode import parse_ltl_string, SUPPORTED_SYNTAXES
+from ltl.ltlnode import parse_ltl_string, SUPPORTED_SYNTAXES
 from codebook import getAllApplicableMisconceptions
 import os
 import json
@@ -22,7 +22,7 @@ from collections import Counter, defaultdict
 import uuid
 import requests
 from stepper import traceSatisfactionPerStep, getTraceRenderData
-import ltltoeng
+import ltl.ltltoeng as ltltoeng
 from authroutes import (
     authroutes,
     init_app,

@@ -3,11 +3,11 @@ import datetime
 from collections import defaultdict
 import codebook
 from codebook import MisconceptionCode
-import ltlnode
+import ltl.ltlnode as ltlnode
 import random
 import re
 import math
-import ltltoeng
+import ltl.ltltoeng as ltltoeng
 from syntacticmutator import applyRandomMutationNotEquivalentTo
 
 

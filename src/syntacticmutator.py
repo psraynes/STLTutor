@@ -1,4 +1,4 @@
-from ltlnode import *
+from ltl.ltlnode import *
 import copy
 import random
 
