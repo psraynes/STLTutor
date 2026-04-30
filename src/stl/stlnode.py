@@ -22,8 +22,7 @@ import stltoeng as stltoeng
 SUPPORTED_SYNTAXES = ['Classic', 'Forge', 'Electrum']
 
 ## Should these come from the lexer instead of being placed here
-IMPLIES_SYMBOL = '->'
-EQUIVALENCE_SYMBOL = '<->'
+IMPLIES_SYMBOL = '=>'
 AND_SYMBOL = '&'
 OR_SYMBOL = '|'
 NOT_SYMBOL = '!'
@@ -35,6 +34,7 @@ LESS_THAN_SYMBOL = '<'
 LESS_THAN_OR_EQUAL_SYMBOL = '<='
 GREATER_THAN_SYMBOL = '>'
 GREATER_THAN_OR_EQUAL_SYMBOL = '>='
+EQUAL_SYMBOL = '='
 
 # Operator precedence (higher number = binds tighter)
 OPERATOR_PRECEDENCE = {
@@ -95,94 +95,62 @@ class stlListenerImpl(stlListener) :
     def __init__(self):
         self.stack = []
 
-    def enterBooleanPred(self, ctx):
-        print('enterBoolPred', ctx.getText())
-
-    def exitBooleanPred(self, ctx):
-        print('exitBoolPred', ctx.getText())
-
-    def enterFormula(self, ctx):
-        print('enterFormula', ctx.getText())
-
     def exitFormula(self, ctx):
-        print('exitFormula', ctx.getText())
+        node = None
+        if ctx.op.type == stlParser.AND:
+            right = self.stack.pop()
+            left = self.stack.pop()
+            node = AndNode(left, right)
+        elif ctx.op.type == stlParser.OR:
+            right = self.stack.pop()
+            left = self.stack.pop()
+            node = OrNode(left, right)
+        elif ctx.op.type == stlParser.IMPLIES:
+            right = self.stack.pop()
+            left = self.stack.pop()
+            node = ImpliesNode(left, right)
+        elif ctx.op.type == stlParser.NOT:
+            operand = self.stack.pop()
+            node = NotNode(operand)
+        elif ctx.op.type == stlParser.EVENT:
+            operand = self.stack.pop()
+            node = FinallyNode(operand, ctx.low.text, ctx.high.text)
+        elif ctx.op.type == stlParser.ALWAYS:
+            operand = self.stack.pop()
+            node = GloballyNode(operand, ctx.low.text, ctx.high.text)
+        elif ctx.op.type == stlParser.UNTIL:
+            right = self.stack.pop()
+            left = self.stack.pop()
+            node = UntilNode(left, right, ctx.low.text, ctx.high.text)
 
-    def enterParprop(self, ctx):
-        print('enterParprop', ctx.getText())
+        self.stack.append(node)
+            
+            
+        print('exitFormula', ctx.getText())
 
     def exitParprop(self, ctx):
         print('exitParprop', ctx.getText())
 
-    def enterExpr(self, ctx):
-        print('enterExpr', ctx.getText())
-
     def exitExpr(self, ctx):
-        print('exitExpr', ctx.getText())
-
-    def enterBooleanExpr(self, ctx):
-        print('enterBooleanExpr', ctx.getText())
-
-    def exitBooleanExpr(self, ctx):
-        print('exitBooleanExpr', ctx.getText())
-
-    def exitDisjunction(self, ctx):
-        right = self.stack.pop()
-        left = self.stack.pop()
-        orNode = OrNode(left, right)
-        self.stack.append(orNode)
-
-    def exitConjunction(self, ctx):
-        right = self.stack.pop()
-        left = self.stack.pop()
-        andNode = AndNode(left, right)
-        self.stack.append(andNode)
-
-    def exitU(self, ctx):
-        right = self.stack.pop()
-        left = self.stack.pop()
-        untilNode = UntilNode(left, right)
-        self.stack.append(untilNode)
-
-    def exitImplication(self, ctx):
-        right = self.stack.pop()
-        left = self.stack.pop()
-        impliesNode = ImpliesNode(left, right)
-        self.stack.append(impliesNode)
-
-    def exitEquivalence(self, ctx):
-        right = self.stack.pop()
-        left = self.stack.pop()
-        equivNode = EquivalenceNode(left, right)
-        self.stack.append(equivNode)
-
-    def exitX(self, ctx):
-        operand = self.stack.pop()
-        nextNode = NextNode(operand)
-        self.stack.append(nextNode)
-
-    def exitF(self, ctx):
-        operand = self.stack.pop()
-        finallyNode = FinallyNode(operand)
-        self.stack.append(finallyNode)
-
-    def exitG(self, ctx):
-        operand = self.stack.pop()
-        globallyNode = GloballyNode(operand)
-        self.stack.append(globallyNode)
-
-    def exitNot(self, ctx):
-        operand = self.stack.pop()
-        notNode = NotNode(operand)
-        self.stack.append(notNode)
-
-    def exitParentheses(self, ctx):
-        formula = self.stack.pop()
-        self.stack.append(formula)
-
-    def exitAtomicFormula(self, ctx):
-        value = ctx.ID().getText()
+        value = ctx.getText()
         literalNode = LiteralNode(value)
         self.stack.append(literalNode)
+
+    def exitBooleanExpr(self, ctx):
+        right = self.stack.pop()
+        left = self.stack.pop()
+        node = BooleanOperatorNode(ctx.op.text, left, right)
+        if ctx.op.text == LESS_THAN_SYMBOL:
+            node = LessThanNode(left, right)
+        elif ctx.op.text == LESS_THAN_OR_EQUAL_SYMBOL:
+            node = LessThanOrEqualNode(left, right)
+        elif ctx.op.text == GREATER_THAN_SYMBOL:
+            node = GreaterThanNode(left, right)
+        elif ctx.op.text == GREATER_THAN_OR_EQUAL_SYMBOL:
+            node = GreaterThanOrEqualNode(left, right)
+        elif ctx.op.text == EQUAL_SYMBOL:
+            node = EqualNode(left, right)
+        self.stack.append(node)
 
     def getRootFormula(self):
         return self.stack[-1]
@@ -533,33 +501,6 @@ class ImpliesNode(BinaryOperatorNode):
         english = stltoeng.choose_best_sentence(patterns)
         return english
 
-
-class EquivalenceNode(BinaryOperatorNode):
-    symbol = EQUIVALENCE_SYMBOL
-    def __init__(self, left, right):
-        super().__init__(EquivalenceNode.symbol, left, right)
-
-    def __to_english__(self):
-        x = stltoeng.apply_special_pattern_if_possible(self)
-        if x is not None:
-            return x
-        lhs = self.left.__to_english__().rstrip('.')
-        rhs = self.right.__to_english__().rstrip('.')
-
-        lhs = stltoeng.normalize_embedded_clause(lhs)
-        rhs = stltoeng.normalize_embedded_clause(rhs)
-
-        # Potential patterns:
-        patterns = [
-            f"{lhs} if and only if {rhs}",
-            f"{lhs} exactly when {rhs}",
-            f"{lhs} is equivalent to {rhs}"
-        ]
-
-        # Choose the most fluent pattern rather than picking randomly
-        english = stltoeng.choose_best_sentence(patterns)
-        return english
-
 class LessThanNode(BooleanOperatorNode):
     symbol = LESS_THAN_SYMBOL
     def __init__(self, left, right):
@@ -647,6 +588,29 @@ class GreaterThanOrEqualNode(BooleanOperatorNode):
             return stltoeng.choose_best_sentence(patterns)
         
         return f"{lhs} is greater than or equal to {rhs}"
+
+class EqualNode(BooleanOperatorNode):
+    symbol = EQUAL_SYMBOL
+    def __init__(self, left, right):
+        super().__init__(EqualNode.symbol, left, right)
+
+    def __to_english__(self):
+        x = stltoeng.apply_special_pattern_if_possible(self)
+        if x is not None:
+            return x
+        lhs = self.left.__to_english__().rstrip('.')
+        rhs = self.right.__to_english__().rstrip('.')
+        
+        # Provide alternatives for simple literals
+        if type(self.left) is LiteralNode and type(self.right) is LiteralNode:
+            patterns = [
+                f"{lhs} is equal to {rhs}",
+                f"{lhs} equals {rhs}",
+                f"{lhs} is {rhs}"
+            ]
+            return stltoeng.choose_best_sentence(patterns)
+        
+        return f"{lhs} is equal to {rhs}"
 
 
 def parse_stl_string(s):
