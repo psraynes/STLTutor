@@ -6,7 +6,19 @@ Use antlr4 command to generate parser, lexer, and listener: antlr4 -Dlanguage=Py
 Review: https://arxiv.org/pdf/1808.03315
 See https://spot.lre.epita.fr/tut04.html for how LTL equivalence is determined
 
-STL is very difficult to google, especially when looking for computer related topics i.e. python libraries or equivalence
-
 stltoeng had a simple pass over to add in lower and upper temporal bounds. Should probably get a proper look to get more appropriate grammar
 
+Where equiv is used:
+    applyRandomMutationNotEquivalentTo -- Used to when building exercises to generate randomly mutated false answers that are guaranteed to not be equivalent to the correct answers
+    getAllApplicableMisconceptions -- Gets all the known common misconceptions about how a given LTL formula could be formed. For a given formula, gets a bunch of similar, but different, formulas that could be mistaken for the intended one. equiv is used to make sure that the modified formulas aren't equivalent to the original
+
+Missing changes for full functionality:
+    Signals instead of traces !!! this is the big one I didn't have time for
+    English translations of formulas are likely off
+    Misconceptions for STL are likely different that those for LTL
+    Equivalence is very different, largely an issue for "distractor" generation
+
+Speed Bumps:
+    Only runs on Unix, I use windows. Had to get WSL2 set up.
+    antlr4-tools has a bug due to stale request to responses
+    STL is very difficult to google, especially when looking for computer related topics i.e. python libraries or equivalence

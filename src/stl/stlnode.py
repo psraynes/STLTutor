@@ -87,7 +87,7 @@ class STLNode(ABC):
 
     @staticmethod
     def equiv(formula1, formula2):
-        pass # Look into PyTeLo stl_distance
+        return False # Look into PyTeLo stl_distance
 
 class stlListenerImpl(stlListener) :
     def __init__(self):
@@ -122,12 +122,6 @@ class stlListenerImpl(stlListener) :
             node = UntilNode(left, right, ctx.low.text, ctx.high.text)
 
         self.stack.append(node)
-            
-            
-        print('exitFormula', ctx.getText())
-
-    def exitParprop(self, ctx):
-        print('exitParprop', ctx.getText())
 
     def exitExpr(self, ctx):
         value = ctx.getText()
@@ -363,7 +357,7 @@ class FinallyNode(TemporalUnaryOperatorNode):
             ]
             return stltoeng.choose_best_sentence(patterns)
         
-        return f"eventually, {op}"
+        return f"eventually, between {self.low} and {self.high}, {op}"
     
     def __forge__(self):
         if self.low is not None and self.high is not None:
@@ -421,7 +415,7 @@ class AndNode(BinaryOperatorNode):
         # Provide alternatives for simple literals
         if type(self.left) is LiteralNode and type(self.right) is LiteralNode:
             patterns = [
-                f"both {lhs} and {rhs}",
+                f"both, {lhs} and {rhs}",
                 f"{lhs} and {rhs}",
                 f"{lhs} together with {rhs}"
             ]
@@ -496,7 +490,7 @@ class LessThanNode(BooleanOperatorNode):
         if type(self.left) is LiteralNode and type(self.right) is LiteralNode:
             patterns = [
                 f"{lhs} is less than {rhs}",
-                f"There are fewer than {rhs} {lhs}"
+                f"there are fewer than {rhs} {lhs}"
             ]
             return stltoeng.choose_best_sentence(patterns)
         
@@ -518,7 +512,7 @@ class LessThanOrEqualNode(BooleanOperatorNode):
         if type(self.left) is LiteralNode and type(self.right) is LiteralNode:
             patterns = [
                 f"{lhs} is less than or equal to {rhs}",
-                f"There are at most {rhs} {lhs}"
+                f"there are at most {rhs} {lhs}"
             ]
             return stltoeng.choose_best_sentence(patterns)
         
@@ -540,7 +534,7 @@ class GreaterThanNode(BooleanOperatorNode):
         if type(self.left) is LiteralNode and type(self.right) is LiteralNode:
             patterns = [
                 f"{lhs} is greater than {rhs}",
-                f"There are more than {rhs} {lhs}"
+                f"there are more than {rhs} {lhs}"
             ]
             return stltoeng.choose_best_sentence(patterns)
         
@@ -562,7 +556,7 @@ class GreaterThanOrEqualNode(BooleanOperatorNode):
         if type(self.left) is LiteralNode and type(self.right) is LiteralNode:
             patterns = [
                 f"{lhs} is greater than or equal to {rhs}",
-                f"There are at least {rhs} {lhs}"
+                f"there are at least {rhs} {lhs}"
             ]
             return stltoeng.choose_best_sentence(patterns)
         
@@ -621,4 +615,4 @@ if __name__ == "__main__":
     stl_string = "(F[0, 4]s > 2)&&(G[2, 4]s <= 4)"
     stl_tree = parse_stl_string(stl_string)
     print("Parsed STL Tree:", stl_tree)
-
+    print("English:", stl_tree.__to_english__())

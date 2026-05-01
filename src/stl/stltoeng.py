@@ -375,7 +375,7 @@ def response_pattern_to_english(node):
             if type(right) is stlnode.FinallyNode:
                 left_eng = clean_for_composition(left.__to_english__())
                 right_eng = clean_for_composition(right.operand.__to_english__())
-                return f"From {node.low} to {node.high}, whenever {left_eng}, eventually {right_eng} between {right.low} and {right.high}"
+                return f"from {node.low} to {node.high}, whenever {left_eng}, eventually {right_eng} between {right.low} and {right.high}"
             
     return None
 
@@ -482,7 +482,7 @@ def chain_precedence_pattern_to_english(node):
                 left_eng = clean_for_composition(left.__to_english__())
                 lhs_eng = clean_for_composition(lhs.__to_english__())
                 rhs_eng = clean_for_composition(rhs.__to_english__())
-                return f"From {node.low} to {node.high}, whenever {left_eng}, {lhs_eng} until {rhs_eng} between {right.low} and {right.high}"
+                return f"from {node.low} to {node.high}, whenever {left_eng}, {lhs_eng} until {rhs_eng} between {right.low} and {right.high}"
     return None
 
 
@@ -503,7 +503,7 @@ def chain_response_pattern_to_english(node):
                     left_eng = clean_for_composition(left.__to_english__())
                     lhs_eng = clean_for_composition(lhs.operand.__to_english__())
                     rhs_eng = clean_for_composition(rhs.operand.__to_english__())
-                    return f"From {node.low} to {node.high}, whenever {left_eng}, eventually, between {lhs.low} and {lhs.high}, {lhs_eng} and between {rhs.low} and {rhs.high}, {rhs_eng}"
+                    return f"from {node.low} to {node.high}, whenever {left_eng}, eventually, between {lhs.low} and {lhs.high}, {lhs_eng} and between {rhs.low} and {rhs.high}, {rhs_eng}"
     return None
 
 
@@ -520,13 +520,13 @@ def never_globally_pattern_to_english(node):
             # For literals, use simpler phrasing with multiple alternatives
             if type(negated) is stlnode.LiteralNode:
                 patterns = [
-                    f"From {node.low} to {node.high}, {negated_eng} will never occur",
-                    f"Between {node.low} and {node.high}, always avoid {negated_eng}",
-                    f"From {node.low} to {node.high}, never {negated_eng}",
-                    f"Between {node.low} and {node.high}, {negated_eng} must never happen"
+                    f"from {node.low} to {node.high}, {negated_eng} will never occur",
+                    f"between {node.low} and {node.high}, always avoid {negated_eng}",
+                    f"from {node.low} to {node.high}, never {negated_eng}",
+                    f"between {node.low} and {node.high}, {negated_eng} must never happen"
                 ]
                 return choose_best_sentence(patterns)
-            return f"From {node.low} to {node.high}, it is never the case that {negated_eng}"
+            return f"from {node.low} to {node.high}, it is never the case that {negated_eng}"
 
 
 #### Finally special cases ####
@@ -544,7 +544,7 @@ def idempotent_finally_pattern_to_english(node):
             while type(innermost) is stlnode.FinallyNode:
                 innermost = innermost.operand
             inner_eng = clean_for_composition(innermost.__to_english__())
-            return f"Between {node.low} and {node.high}, eventually, {inner_eng}"
+            return f"from {node.low} to {node.high}, eventually, {inner_eng}"
     return None
 
 
@@ -558,8 +558,8 @@ def finally_not_pattern_to_english(node):
             negated_eng = clean_for_composition(op.operand.__to_english__())
             # For literals, simpler phrasing
             if type(op.operand) is stlnode.LiteralNode:
-                return f"Between {node.low} and {node.high}, eventually, not {negated_eng}"
-            return f"Eventually, between {node.low} and {node.high}, it will not be the case that {negated_eng}"
+                return f"from {node.low} to {node.high}, eventually, not {negated_eng}"
+            return f"eventually, from {node.low} to {node.high}, it will not be the case that {negated_eng}"
     return None
 
 
@@ -573,7 +573,7 @@ def finally_never_globally_pattern_to_english(node):
             negated = op.operand
             if type(negated) is stlnode.NotNode:
                 negated_eng = clean_for_composition(negated.operand.__to_english__())
-                return f"Eventually, between {node.low} and {node.high}, {negated_eng} will never occur again"
+                return f"eventually, between {node.low} and {node.high}, {negated_eng} will never occur again"
     return None
 
 
@@ -596,7 +596,7 @@ def finally_globally_pattern_to_english(node):
             if type(inner) is stlnode.ImpliesNode:
                 left_eng = clean_for_composition(inner.left.__to_english__())
                 right_eng = clean_for_composition(inner.right.__to_english__())
-                return f"Between {node.low} and {node.high}, eventually, the rule 'if {left_eng} then {right_eng}' will always hold from {op.low} to {op.high}"
+                return f"between {node.low} and {node.high}, eventually, the rule 'if {left_eng} then {right_eng}' will always hold from {op.low} to {op.high}"
             # Handle F G F ... patterns (eventual recurrence) - collapses to G F by absorption
             # Source: Manna & Pnueli - alternating F/G chains simplify
             if type(inner) is stlnode.FinallyNode:
@@ -606,16 +606,16 @@ def finally_globally_pattern_to_english(node):
                 while type(innermost) is stlnode.GloballyNode or type(innermost) is stlnode.FinallyNode:
                     innermost = innermost.operand
                 inner_eng = clean_for_composition(innermost.__to_english__())
-                return f"Between {node.low} and {node.high}, eventually, {inner_eng} will happen infinitely often"
+                return f"between {node.low} and {node.high}, eventually, {inner_eng} will happen infinitely often"
             # Handle F G G x = F G x (G G = G)
             if type(inner) is stlnode.GloballyNode:
                 innermost = inner.operand
                 while type(innermost) is stlnode.GloballyNode:
                     innermost = innermost.operand
                 inner_eng = clean_for_composition(innermost.__to_english__())
-                return f"Between {node.low} and {node.high}, eventually, {inner_eng} will become true and remain true from {inner.low} to {inner.high}"
+                return f"between {node.low} and {node.high}, eventually, {inner_eng} will become true and remain true from {inner.low} to {inner.high}"
             inner_eng = clean_for_composition(inner.__to_english__())
-            return f"Between {node.low} and {node.high}, eventually, {inner_eng} will be true from {op.low} to {op.high}"
+            return f"between {node.low} and {node.high}, eventually, {inner_eng} will be true from {op.low} to {op.high}"
     return None
 
 
@@ -634,7 +634,7 @@ def persistence_pattern_to_english(node):
             # Only match simple literals for this specific phrasing
             if type(inner) is stlnode.LiteralNode:
                 inner_eng = clean_for_composition(inner.__to_english__())
-                return f"Between {node.low} and {node.high}, eventually {inner_eng} will become true and stay true from {op.low} to {op.high}"
+                return f"between {node.low} and {node.high}, eventually {inner_eng} will become true and stay true from {op.low} to {op.high}"
     return None
 
 
@@ -654,12 +654,12 @@ def persistence_after_trigger_pattern_to_english(node):
             if type(right) is stlnode.GloballyNode:
                 trigger_eng = clean_for_composition(left.__to_english__())
                 persistent_eng = clean_for_composition(right.operand.__to_english__())
-                return f"Between {node.low} and {node.high}, eventually {trigger_eng} will occur, and from then on {persistent_eng} will always hold"
+                return f"between {node.low} and {node.high}, eventually {trigger_eng} will occur, and from then on {persistent_eng} will always hold"
             # Check for G p & q (reversed order)
             if type(left) is stlnode.GloballyNode:
                 trigger_eng = clean_for_composition(right.__to_english__())
                 persistent_eng = clean_for_composition(left.operand.__to_english__())
-                return f"Between {node.low} and {node.high}, eventually {trigger_eng} will occur, and from then on {persistent_eng} will always hold"
+                return f"between {node.low} and {node.high}, eventually {trigger_eng} will occur, and from then on {persistent_eng} will always hold"
     return None
 
 
@@ -677,7 +677,7 @@ def trigger_to_permanence_pattern_to_english(node):
             if type(right) is stlnode.GloballyNode:
                 trigger_eng = clean_for_composition(left.__to_english__())
                 result_eng = clean_for_composition(right.operand.__to_english__())
-                return f"Between {node.low} and {node.high}, eventually, once {trigger_eng}, then {result_eng} will hold forever after"
+                return f"between {node.low} and {node.high}, eventually, once {trigger_eng}, then {result_eng} will hold forever after"
     return None
 
 
@@ -693,7 +693,7 @@ def finally_and_pattern_to_english(node):
                 return None
             left_eng = clean_for_composition(op.left.__to_english__())
             right_eng = clean_for_composition(op.right.__to_english__())
-            return f"Between {node.low} and {node.high}, eventually, both {left_eng} and {right_eng} will be true simultaneously"
+            return f"between {node.low} and {node.high}, eventually, both {left_eng} and {right_eng} will be true simultaneously"
     return None
 
 # ! (F p)
@@ -705,9 +705,9 @@ def not_finally_pattern_to_english(node):
         if type(op) is stlnode.FinallyNode:
             inner_eng = clean_for_composition(op.operand.__to_english__())
             patterns = [
-                f"From {node.low} to {node.high}, {inner_eng} will never occur",
-                f"From {node.low} to {node.high}, never {inner_eng}",
-                f"From {node.low} to {node.high}, {inner_eng} is impossible"
+                f"from {node.low} to {node.high}, {inner_eng} will never occur",
+                f"from {node.low} to {node.high}, never {inner_eng}",
+                f"from {node.low} to {node.high}, {inner_eng} is impossible"
             ]
             return choose_best_sentence(patterns)
     return None
@@ -777,33 +777,6 @@ def globally_until_finally_pattern_to_english(node):
     return None
 
 
-# Pattern: (p U q) | G p  -- weak until phrasing
-@pattern
-def weak_until_disjunction_pattern_to_english(node):
-    if type(node) is stlnode.OrNode:
-        left, right = node.left, node.right
-
-        def match(until, glob):
-            if type(until) is stlnode.UntilNode and type(glob) is stlnode.GloballyNode:
-                p, q = until.left, until.right
-                if stlnode.STLNode.equiv(str(p), str(glob.operand)):
-                    p_eng = clean_for_composition(p.__to_english__())
-                    q_eng = clean_for_composition(q.__to_english__())
-                    return choose_best_sentence([
-                        # Canonical: explicit case split
-                        f"Between {until.low} and {until.high}, {p_eng} holds until {q_eng} happens, or {p_eng} holds between {glob.low} and {glob.high} if {q_eng} never happens",
-                        # Template B: conditional termination
-                        f"{p_eng} keeps holding from {glob.low} to {glob.high} and stops only if {q_eng} happens between {until.low} and {until.high}",
-                    ])
-            return None
-
-        # Handle (p U q) ∨ G p and G p ∨ (p U q)
-        return match(left, right) or match(right, left)
-
-    return None
-
-
-
 # Pattern: G((p U q) -> F r)
 # English: whenever p until q, eventually r will occur
 @pattern
@@ -817,7 +790,7 @@ def globally_until_implies_finally_pattern_to_english(node):
                 p_eng = clean_for_composition(left.left.__to_english__())
                 q_eng = clean_for_composition(left.right.__to_english__())
                 r_eng = clean_for_composition(right.operand.__to_english__())
-                return f"From {left.low} to {left.high}, whenever {p_eng} until {q_eng}, eventually, between {right.low} and {right.high}, {r_eng} will occur"
+                return f"from {left.low} to {left.high}, whenever {p_eng} until {q_eng}, eventually, between {right.low} and {right.high}, {r_eng} will occur"
     return None
 
 
