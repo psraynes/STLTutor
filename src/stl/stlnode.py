@@ -26,7 +26,6 @@ IMPLIES_SYMBOL = '=>'
 AND_SYMBOL = '&'
 OR_SYMBOL = '|'
 NOT_SYMBOL = '!'
-NEXT_SYMBOL = 'X'
 GLOBALLY_SYMBOL = 'G'
 FINALLY_SYMBOL = 'F'
 UNTIL_SYMBOL = 'U'
@@ -42,7 +41,6 @@ OPERATOR_PRECEDENCE = {
     'Or': 2,
     'And': 3,
     'Not': 4,
-    'Next': 5,
     'Globally': 5,
     'Finally': 5,
     'Literal': 10
@@ -306,25 +304,6 @@ class UntilNode(TemporalBinaryOperatorNode):
             return f'({str(self.left)} UNTIL {self.operator}[{self.low},{self.high}] {str(self.right)})'
         else:
             return f"({self.left.__forge__()} UNTIL {self.right.__forge__()})"
-
-
-class NextNode(UnaryOperatorNode):
-    symbol = NEXT_SYMBOL
-    def __init__(self, operand):
-        super().__init__(NextNode.symbol, operand)
-
-    def __to_english__(self):
-        x = stltoeng.apply_special_pattern_if_possible(self)
-        if x is not None:
-            return x
-        op = self.operand.__to_english__().rstrip('.')
-        return f"in the next step, {op}"
-    
-    def __forge__(self):
-        return f"(NEXT_STATE {self.operand.__forge__()})"
-    
-    def __electrum__(self):
-        return f"(AFTER {self.operand.__electrum__()})"
 
 
 class GloballyNode(TemporalUnaryOperatorNode):

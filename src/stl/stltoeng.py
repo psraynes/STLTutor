@@ -71,15 +71,6 @@ def _steps_phrase(count):
     return f"{count} steps"
 
 
-def _count_next_chain(node):
-    """Count consecutive Next nodes and return (count, innermost operand)."""
-    steps = 0
-    while type(node) is stlnode.NextNode:
-        steps += 1
-        node = node.operand
-    return steps, node
-
-
 def capitalize_sentence(text):
     """Capitalize the first letter of a sentence.
     
@@ -305,10 +296,10 @@ def globally_literal_pattern_to_english(node):
         if type(op) is stlnode.LiteralNode:
             lit_eng = clean_for_composition(op.__to_english__())
             patterns = [
-                f"{lit_eng} holds at all times",
-                f"{lit_eng} always holds",
-                f"{lit_eng} must always hold",
-                f"at all times, {lit_eng} holds"
+                f"{lit_eng} holds at all times between {node.low} and {node.high}",
+                f"{lit_eng} always holds between {node.low} and {node.high}",
+                f"{lit_eng} must always hold from {node.low} to {node.high}",
+                f"at all times between {node.low} and {node.high}, {lit_eng} holds"
             ]
             return choose_best_sentence(patterns)
     return None
@@ -324,9 +315,9 @@ def globally_and_pattern_to_english(node):
             left_eng = clean_for_composition(op.left.__to_english__())
             right_eng = clean_for_composition(op.right.__to_english__())
             patterns = [
-                f"always maintain both {left_eng} and {right_eng}",
-                f"both {left_eng} and {right_eng} must always hold",
-                f"at all times, both {left_eng} and {right_eng} hold"
+                f"always maintain both {left_eng} and {right_eng} from {node.low} to {node.high}",
+                f"both {left_eng} and {right_eng} must always hold from {node.low} to {node.high}",
+                f"at all times between {node.low} and {node.high}, both {left_eng} and {right_eng} hold"
             ]
             return choose_best_sentence(patterns)
     return None
@@ -342,9 +333,9 @@ def globally_or_pattern_to_english(node):
             left_eng = clean_for_composition(op.left.__to_english__())
             right_eng = clean_for_composition(op.right.__to_english__())
             patterns = [
-                f"always have either {left_eng} or {right_eng}",
-                f"either {left_eng} or {right_eng} must always hold",
-                f"at all times, either {left_eng} or {right_eng} holds"
+                f"always have either {left_eng} or {right_eng} from {node.low} to {node.high}",
+                f"either {left_eng} or {right_eng} must always hold between {node.low} and {node.high}",
+                f"at all times between {node.low} and {node.high}, either {left_eng} or {right_eng} holds"
             ]
             return choose_best_sentence(patterns)
     return None
@@ -363,7 +354,7 @@ def idempotent_globally_pattern_to_english(node):
             while type(innermost) is stlnode.GloballyNode:
                 innermost = innermost.operand
             inner_eng = clean_for_composition(innermost.__to_english__())
-            return f"at all times, {inner_eng}"
+            return f"at all times between {node.low} and {node.high}, {inner_eng}"
     return None
 
 
@@ -384,7 +375,7 @@ def response_pattern_to_english(node):
             if type(right) is stlnode.FinallyNode:
                 left_eng = clean_for_composition(left.__to_english__())
                 right_eng = clean_for_composition(right.operand.__to_english__())
-                return f"whenever {left_eng}, eventually {right_eng}"
+                return f"From {node.low} to {node.high}, whenever {left_eng}, eventually {right_eng} between {right.low} and {right.high}"
             
     return None
 
@@ -443,7 +434,7 @@ def _check_final_state_pattern(node, right_node_type):
     
     Args:
         node: The node to check
-        right_node_type: The expected type for the right side operator (NextNode or GloballyNode)
+        right_node_type: The expected type for the right side operator (GloballyNode)
     
     Returns:
         English translation if pattern matches, None otherwise
@@ -465,13 +456,6 @@ def _check_final_state_pattern(node, right_node_type):
                         f"after {left_eng} holds, it continues to hold forever"
                     ])
     return None
-
-
-# Pattern: G (p -> X p)
-# English: Once p (holds), it will always hold.
-@pattern
-def final_state_next_pattern(node):
-    return _check_final_state_pattern(node, stlnode.NextNode)
 
 
 # Pattern: G (p -> G p)
@@ -498,7 +482,7 @@ def chain_precedence_pattern_to_english(node):
                 left_eng = clean_for_composition(left.__to_english__())
                 lhs_eng = clean_for_composition(lhs.__to_english__())
                 rhs_eng = clean_for_composition(rhs.__to_english__())
-                return f"whenever {left_eng}, {lhs_eng} until {rhs_eng}"
+                return f"From {node.low} to {node.high}, whenever {left_eng}, {lhs_eng} until {rhs_eng} between {right.low} and {right.high}"
     return None
 
 
@@ -519,53 +503,9 @@ def chain_response_pattern_to_english(node):
                     left_eng = clean_for_composition(left.__to_english__())
                     lhs_eng = clean_for_composition(lhs.operand.__to_english__())
                     rhs_eng = clean_for_composition(rhs.operand.__to_english__())
-                    return f"whenever {left_eng}, eventually {lhs_eng} and {rhs_eng}"
+                    return f"From {node.low} to {node.high}, whenever {left_eng}, eventually, between {lhs.low} and {lhs.high}, {lhs_eng} and between {rhs.low} and {rhs.high}, {rhs_eng}"
     return None
 
-
-## Immediate Response Pattern
-# Pattern: G(p -> X q)
-# English: Whenever p (holds), q must hold in the very next step
-# Source: Dwyer, M.B., Avrunin, G.S., Corbett, J.C. "Patterns in Property Specifications for Finite-State Verification"
-#         Proceedings of ICSE 1999. http://patterns.projects.cs.ksu.edu/
-@pattern
-def immediate_response_pattern_to_english(node):
-    if type(node) is stlnode.GloballyNode:
-        op = node.operand
-        if type(op) is stlnode.ImpliesNode:
-            left = op.left
-            right = op.right
-            if type(right) is stlnode.NextNode:
-                # Don't match if it's the final state pattern G(p -> X p)
-                if (type(left) is stlnode.LiteralNode and 
-                    type(right.operand) is stlnode.LiteralNode and
-                    left.value == right.operand.value):
-                    return None
-                left_eng = clean_for_composition(left.__to_english__())
-                right_eng = clean_for_composition(right.operand.__to_english__())
-                return f"whenever {left_eng}, {right_eng} must hold in the next step"
-    return None
-
-
-## Bounded Response Pattern  
-# Pattern: G(p -> X(F q))
-# English: Whenever p (holds), q will eventually occur (starting from the next step)
-# Source: Dwyer et al. "Patterns in Property Specifications" ICSE 1999
-#         This is a variant of the response pattern with a one-step delay
-@pattern
-def bounded_response_pattern_to_english(node):
-    if type(node) is stlnode.GloballyNode:
-        op = node.operand
-        if type(op) is stlnode.ImpliesNode:
-            left = op.left
-            right = op.right
-            if type(right) is stlnode.NextNode:
-                inner = right.operand
-                if type(inner) is stlnode.FinallyNode:
-                    left_eng = clean_for_composition(left.__to_english__())
-                    right_eng = clean_for_composition(inner.operand.__to_english__())
-                    return f"whenever {left_eng}, {right_eng} will eventually occur after the next step"
-    return None
 
 
 ## G !p
@@ -580,13 +520,13 @@ def never_globally_pattern_to_english(node):
             # For literals, use simpler phrasing with multiple alternatives
             if type(negated) is stlnode.LiteralNode:
                 patterns = [
-                    f"{negated_eng} will never occur",
-                    f"always avoid {negated_eng}",
-                    f"never {negated_eng}",
-                    f"{negated_eng} must never happen"
+                    f"From {node.low} to {node.high}, {negated_eng} will never occur",
+                    f"Between {node.low} and {node.high}, always avoid {negated_eng}",
+                    f"From {node.low} to {node.high}, never {negated_eng}",
+                    f"Between {node.low} and {node.high}, {negated_eng} must never happen"
                 ]
                 return choose_best_sentence(patterns)
-            return f"it is never the case that {negated_eng}"
+            return f"From {node.low} to {node.high}, it is never the case that {negated_eng}"
 
 
 #### Finally special cases ####
@@ -604,7 +544,7 @@ def idempotent_finally_pattern_to_english(node):
             while type(innermost) is stlnode.FinallyNode:
                 innermost = innermost.operand
             inner_eng = clean_for_composition(innermost.__to_english__())
-            return f"eventually, {inner_eng}"
+            return f"Between {node.low} and {node.high}, eventually, {inner_eng}"
     return None
 
 
@@ -618,8 +558,8 @@ def finally_not_pattern_to_english(node):
             negated_eng = clean_for_composition(op.operand.__to_english__())
             # For literals, simpler phrasing
             if type(op.operand) is stlnode.LiteralNode:
-                return f"eventually, not {negated_eng}"
-            return f"eventually, it will not be the case that {negated_eng}"
+                return f"Between {node.low} and {node.high}, eventually, not {negated_eng}"
+            return f"Eventually, between {node.low} and {node.high}, it will not be the case that {negated_eng}"
     return None
 
 
@@ -633,7 +573,7 @@ def finally_never_globally_pattern_to_english(node):
             negated = op.operand
             if type(negated) is stlnode.NotNode:
                 negated_eng = clean_for_composition(negated.operand.__to_english__())
-                return f"eventually, {negated_eng} will never occur again"
+                return f"Eventually, between {node.low} and {node.high}, {negated_eng} will never occur again"
     return None
 
 
@@ -656,7 +596,7 @@ def finally_globally_pattern_to_english(node):
             if type(inner) is stlnode.ImpliesNode:
                 left_eng = clean_for_composition(inner.left.__to_english__())
                 right_eng = clean_for_composition(inner.right.__to_english__())
-                return f"eventually, the rule 'if {left_eng} then {right_eng}' will always hold"
+                return f"Between {node.low} and {node.high}, eventually, the rule 'if {left_eng} then {right_eng}' will always hold from {op.low} to {op.high}"
             # Handle F G F ... patterns (eventual recurrence) - collapses to G F by absorption
             # Source: Manna & Pnueli - alternating F/G chains simplify
             if type(inner) is stlnode.FinallyNode:
@@ -666,16 +606,16 @@ def finally_globally_pattern_to_english(node):
                 while type(innermost) is stlnode.GloballyNode or type(innermost) is stlnode.FinallyNode:
                     innermost = innermost.operand
                 inner_eng = clean_for_composition(innermost.__to_english__())
-                return f"eventually, {inner_eng} will happen infinitely often"
+                return f"Between {node.low} and {node.high}, eventually, {inner_eng} will happen infinitely often"
             # Handle F G G x = F G x (G G = G)
             if type(inner) is stlnode.GloballyNode:
                 innermost = inner.operand
                 while type(innermost) is stlnode.GloballyNode:
                     innermost = innermost.operand
                 inner_eng = clean_for_composition(innermost.__to_english__())
-                return f"eventually, {inner_eng} will become true and remain true forever"
+                return f"Between {node.low} and {node.high}, eventually, {inner_eng} will become true and remain true from {inner.low} to {inner.high}"
             inner_eng = clean_for_composition(inner.__to_english__())
-            return f"eventually, {inner_eng} will always be true"
+            return f"Between {node.low} and {node.high}, eventually, {inner_eng} will be true from {op.low} to {op.high}"
     return None
 
 
@@ -694,7 +634,7 @@ def persistence_pattern_to_english(node):
             # Only match simple literals for this specific phrasing
             if type(inner) is stlnode.LiteralNode:
                 inner_eng = clean_for_composition(inner.__to_english__())
-                return f"eventually {inner_eng} will become true and stay true forever"
+                return f"Between {node.low} and {node.high}, eventually {inner_eng} will become true and stay true from {op.low} to {op.high}"
     return None
 
 
@@ -714,12 +654,12 @@ def persistence_after_trigger_pattern_to_english(node):
             if type(right) is stlnode.GloballyNode:
                 trigger_eng = clean_for_composition(left.__to_english__())
                 persistent_eng = clean_for_composition(right.operand.__to_english__())
-                return f"eventually {trigger_eng} will occur, and from then on {persistent_eng} will always hold"
+                return f"Between {node.low} and {node.high}, eventually {trigger_eng} will occur, and from then on {persistent_eng} will always hold"
             # Check for G p & q (reversed order)
             if type(left) is stlnode.GloballyNode:
                 trigger_eng = clean_for_composition(right.__to_english__())
                 persistent_eng = clean_for_composition(left.operand.__to_english__())
-                return f"eventually {trigger_eng} will occur, and from then on {persistent_eng} will always hold"
+                return f"Between {node.low} and {node.high}, eventually {trigger_eng} will occur, and from then on {persistent_eng} will always hold"
     return None
 
 
@@ -737,7 +677,7 @@ def trigger_to_permanence_pattern_to_english(node):
             if type(right) is stlnode.GloballyNode:
                 trigger_eng = clean_for_composition(left.__to_english__())
                 result_eng = clean_for_composition(right.operand.__to_english__())
-                return f"eventually, once {trigger_eng}, then {result_eng} will hold forever after"
+                return f"Between {node.low} and {node.high}, eventually, once {trigger_eng}, then {result_eng} will hold forever after"
     return None
 
 
@@ -753,7 +693,7 @@ def finally_and_pattern_to_english(node):
                 return None
             left_eng = clean_for_composition(op.left.__to_english__())
             right_eng = clean_for_composition(op.right.__to_english__())
-            return f"eventually, both {left_eng} and {right_eng} will be true simultaneously"
+            return f"Between {node.low} and {node.high}, eventually, both {left_eng} and {right_eng} will be true simultaneously"
     return None
 
 # ! (F p)
@@ -765,57 +705,12 @@ def not_finally_pattern_to_english(node):
         if type(op) is stlnode.FinallyNode:
             inner_eng = clean_for_composition(op.operand.__to_english__())
             patterns = [
-                f"{inner_eng} will never occur",
-                f"never {inner_eng}",
-                f"{inner_eng} is impossible"
+                f"From {node.low} to {node.high}, {inner_eng} will never occur",
+                f"From {node.low} to {node.high}, never {inner_eng}",
+                f"From {node.low} to {node.high}, {inner_eng} is impossible"
             ]
             return choose_best_sentence(patterns)
     return None
-
-
-# !G( !( p & X p ) ) - Recovery pattern with grace period
-# This means: it's not always the case that !(p & X p), which means
-# eventually p & X p will happen, indicating p holds in consecutive steps
-@pattern  
-def recovery_pattern_to_english(node):
-    """Detect and translate the recovery pattern !G(!(p & X p))."""
-    # Early return if not a NotNode
-    if type(node) is not stlnode.NotNode:
-        return None
-    
-    op = node.operand
-    if type(op) is not stlnode.GloballyNode:
-        return None
-    
-    inner = op.operand
-    if type(inner) is not stlnode.NotNode:
-        return None
-    
-    innermost = inner.operand
-    if type(innermost) is not stlnode.AndNode:
-        return None
-    
-    # Check for pattern p & X p where both p's are the same literal
-    left = innermost.left
-    right = innermost.right
-    
-    if type(right) is not stlnode.NextNode:
-        return None
-    
-    if not (type(left) is stlnode.LiteralNode and 
-            type(right.operand) is stlnode.LiteralNode and
-            left.value == right.operand.value):
-        return None
-    
-    # Pattern matched! Provide alternative phrasings
-    lit_eng = clean_for_composition(left.__to_english__())
-    patterns = [
-        f"{lit_eng} should eventually hold in consecutive steps, with a grace period for recovery",
-        f"{lit_eng} must eventually occur in back-to-back steps, allowing for recovery",
-        f"{lit_eng} will eventually happen consecutively, with recovery allowed"
-    ]
-    return choose_best_sentence(patterns)
-
 
 ### Until special cases ###
 
@@ -830,7 +725,7 @@ def nested_until_pattern_to_english(node):
             p_eng = clean_for_composition(left.left.__to_english__())
             q_eng = clean_for_composition(left.right.__to_english__())
             r_eng = clean_for_composition(right.__to_english__())
-            return f"{p_eng} until {q_eng}, and this continues until {r_eng}"
+            return f"{p_eng} until {q_eng} from {left.low} to {left.high}, and from {node.low} to {node.high} this continues until {r_eng}"
     return None
 
 
@@ -848,7 +743,7 @@ def globally_finally_and_pattern_to_english(node):
             if type(inner) is stlnode.AndNode:
                 left_eng = clean_for_composition(inner.left.__to_english__())
                 right_eng = clean_for_composition(inner.right.__to_english__())
-                return f"at all times, there will eventually be a point where both {left_eng} and {right_eng} hold simultaneously"
+                return f"at all times between {node.low} and {node.high}, there will eventually be a point from {op.low} to {op.high} where both {left_eng} and {right_eng} hold simultaneously"
     return None
 
 
@@ -864,7 +759,7 @@ def finally_globally_implies_finally_pattern_to_english(node):
                 if type(inner.right) is stlnode.FinallyNode:
                     left_eng = clean_for_composition(inner.left.__to_english__())
                     right_eng = clean_for_composition(inner.right.operand.__to_english__())
-                    return f"eventually we reach a point where, from then on, whenever {left_eng} then eventually {right_eng}"
+                    return f"eventually, between {node.low} and {node.high}, we reach a point where, between {op.low} and {op.high}, whenever {left_eng} then eventually from {inner.right.low} to {inner.right.high} {right_eng}"
     return None
 
 
@@ -878,20 +773,7 @@ def globally_until_finally_pattern_to_english(node):
         if type(left) is stlnode.GloballyNode and type(right) is stlnode.FinallyNode:
             left_eng = clean_for_composition(left.operand.__to_english__())
             right_eng = clean_for_composition(right.operand.__to_english__())
-            return f"at all times {left_eng}, and this continues until eventually {right_eng} occurs"
-    return None
-
-
-# Pattern: X(p U q)
-# English: in the next step, p until q
-@pattern
-def next_until_pattern_to_english(node):
-    if type(node) is stlnode.NextNode:
-        op = node.operand
-        if type(op) is stlnode.UntilNode:
-            left_eng = clean_for_composition(op.left.__to_english__())
-            right_eng = clean_for_composition(op.right.__to_english__())
-            return f"in the next step, {left_eng} until {right_eng}"
+            return f"at all times between {node.low} and {node.high}, {left_eng}, and this continues until eventually {right_eng} occurs between {right.low} and {right.high}"
     return None
 
 
@@ -909,9 +791,9 @@ def weak_until_disjunction_pattern_to_english(node):
                     q_eng = clean_for_composition(q.__to_english__())
                     return choose_best_sentence([
                         # Canonical: explicit case split
-                        f"{p_eng} holds until {q_eng} happens, or {p_eng} holds forever if {q_eng} never happens",
+                        f"Between {until.low} and {until.high}, {p_eng} holds until {q_eng} happens, or {p_eng} holds between {glob.low} and {glob.high} if {q_eng} never happens",
                         # Template B: conditional termination
-                        f"{p_eng} keeps holding and stops only if {q_eng} happens",
+                        f"{p_eng} keeps holding from {glob.low} to {glob.high} and stops only if {q_eng} happens between {until.low} and {until.high}",
                     ])
             return None
 
@@ -935,72 +817,7 @@ def globally_until_implies_finally_pattern_to_english(node):
                 p_eng = clean_for_composition(left.left.__to_english__())
                 q_eng = clean_for_composition(left.right.__to_english__())
                 r_eng = clean_for_composition(right.operand.__to_english__())
-                return f"whenever {p_eng} until {q_eng}, eventually {r_eng} will occur"
-    return None
-
-
-@pattern
-def aligned_next_implication_pattern_to_english(node):
-    if type(node) is stlnode.ImpliesNode:
-        left_steps, left_core = _count_next_chain(node.left)
-        right_steps, right_core = _count_next_chain(node.right)
-
-        if left_steps >= 1 and right_steps >= left_steps and right_steps > 0:
-            left_eng = clean_for_composition(left_core.__to_english__())
-            right_eng = clean_for_composition(right_core.__to_english__())
-
-            gap = right_steps - left_steps
-            if left_steps == 1:
-                left_clause = "in the next step"
-            else:
-                left_clause = f"in {_steps_phrase(left_steps)}"
-
-            if gap == 0:
-                timing = "in that same step"
-            elif gap == 1:
-                timing = "in the following step"
-            else:
-                timing = f"{_steps_phrase(gap)} after that"
-
-            absolute = f"in {_steps_phrase(right_steps)} from now"
-            return f"if {left_clause}, {left_eng}, then {timing} ({absolute}), {right_eng}"
-    return None
-
-
-@pattern
-def aligned_next_boolean_pattern_to_english(node):
-    if type(node) in (stlnode.AndNode, stlnode.OrNode):
-        left_steps, left_core = _count_next_chain(node.left)
-        right_steps, right_core = _count_next_chain(node.right)
-
-        if left_steps >= 1 and right_steps == left_steps:
-            shared_clause = "in the next step" if left_steps == 1 else f"in {_steps_phrase(left_steps)}"
-            left_eng = clean_for_composition(left_core.__to_english__())
-            right_eng = clean_for_composition(right_core.__to_english__())
-
-            if type(node) is stlnode.AndNode:
-                return f"{shared_clause}, both {left_eng} and {right_eng}"
-            return f"{shared_clause}, either {left_eng} or {right_eng}"
-    return None
-
-
-#### neXt special cases ####
-
-# X X X X r
-# English: In _n_ states, r will (hold)
-@pattern
-def apply_next_special_pattern_if_possible(node):
-
-    number_of_nexts = 0
-    original_node = node
-
-    while type(node) is stlnode.NextNode:
-        number_of_nexts += 1
-        node = node.operand
-
-    if number_of_nexts > 1:
-        inner_eng = clean_for_composition(node.__to_english__())
-        return f"in {number_of_nexts} steps, {inner_eng}"
+                return f"From {left.low} to {left.high}, whenever {p_eng} until {q_eng}, eventually, between {right.low} and {right.high}, {r_eng} will occur"
     return None
 
 

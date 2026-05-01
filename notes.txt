@@ -8,3 +8,5 @@ See https://spot.lre.epita.fr/tut04.html for how LTL equivalence is determined
 
 STL is very difficult to google, especially when looking for computer related topics i.e. python libraries or equivalence
 
+stltoeng had a simple pass over to add in lower and upper temporal bounds. Should probably get a proper look to get more appropriate grammar
+
