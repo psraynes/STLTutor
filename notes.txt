@@ -5,6 +5,7 @@ Use antlr4 command to generate parser, lexer, and listener: antlr4 -Dlanguage=Py
 
 Review: https://arxiv.org/pdf/1808.03315
 See https://spot.lre.epita.fr/tut04.html for how LTL equivalence is determined
+See https://spinroot.com/spin/Doc/lics86.pdf
 
 stltoeng had a simple pass over to add in lower and upper temporal bounds. Should probably get a proper look to get more appropriate grammar
 
@@ -22,3 +23,18 @@ Speed Bumps:
     Only runs on Unix, I use windows. Had to get WSL2 set up.
     antlr4-tools has a bug due to stale request to responses
     STL is very difficult to google, especially when looking for computer related topics i.e. python libraries or equivalence
+
+2 types of problems:
+    English <-> LTL
+        Need to update language parsing for STL
+    Trance Satisfaction
+        Yes/No and Multiple Choice
+        Need to display signals and use signals instead for satisfaction
+
+Problems hinge around generating "Good sets of related formulas."
+Create a random seed formula -> mutated by common misconceptions to get close, but different formulas
+
+Mutations are done based on a catalog of LTL misconceptions. The likelyhood of each misconception being used in a problem is based on the Learners progress in that area
+
+Additional for STL:
+    Robustness?

@@ -1,33 +1,35 @@
-# LTL Tutor
+# STL Tutor
 
-An adaptive, misconception-driven tutoring system for **Linear Temporal Logic (LTL)**.
+An adaptation of [LTL Tutor](https://github.com/brownplt/LTLTutor) to teach STL concepts instead.
 
-**Try it:** [https://ltl-tutor.xyz](https://ltl-tutor.xyz)
+To install and run, follow the Development Environment instructions found in [AGENTS.md](AGENTS.md)
 
-**Blog post:** [https://blog.brownplt.org/2024/08/08/ltltutor.html](https://blog.brownplt.org/2024/08/08/ltltutor.html)
+STL Tutor is currently incomplete. As it is now, there is are equivalent classes to ltlnode.py and ltltoeng.py for STL. These can be found in [src/stl](src/stl). The STL syntax was copied from [PyTeLo](https://github.com/erl-lehigh/PyTeLo/tree/main).
 
-**CAV 2025 Distinguished Paper:** [https://cs.brown.edu/~sk/Publications/Papers/Published/pgnk-ltl-tutor/paper.pdf](https://cs.brown.edu/~sk/Publications/Papers/Published/pgnk-ltl-tutor/paper.pdf)
+# Missing Features:
+- Convert to using Signals
+  - Traces
+    - LTLTutor uses Traces, stored as strings, as the accepting objects for LTL formulas
+    - Traces are displayed as a series of discrete boolean values
+    - Satisfaction is determined using SPOT
+  - Signals
+    - Signals are a continuous series of values and as such require a more complete representation than LTL Traces
+    - Signals would also require a different display method from Traces
+    - Satisfaction can be determined using PyTeLo, but would require converting to their data structures
 
-![Latest Tag](https://img.shields.io/github/v/tag/brownplt/LTLTutor?label=latest%20tag)
+- Distractor Generation
+  - At the core of LTLTutor is its ability to generate "Distractors" i.e. similar looking, but invalid answers to their problems
+  - Generated via "Misconceptions" that are common LTL mistakes, not STL mistakes
+  - Leverages SPOT to generate random LTL formulas
+  - Additionally leverage SPOT to make sure generated formulas aren't equivalent to the correct formula
 
-LTL Tutor provides targeted practice and feedback for learning LTL. It models common misconceptions, adapts to learner performance, and supports both classroom and self-study use.
+# Potential Areas for Improvement:
+- Robustness
+  - Robustness is a very central concept to STL, but isn't covered by LTL
+  - No problem structures test Robustness knowledge
+  - Robustness should be included in an STL focused learning tool
 
-If you use this work, consider citing:
-
-```bibtex
-@InProceedings{10.1007/978-3-031-98685-7_9,
-  author="Prasad, Siddhartha
-    and Greenman, Ben
-    and Nelson, Tim
-    and Krishnamurthi, Shriram",
-  editor="Piskac, Ruzica
-    and Rakamari{\'{c}}, Zvonimir",
-  title="A Misconception-Driven Adaptive Tutor for Linear Temporal Logic",
-  booktitle="Computer Aided Verification",
-  year="2025",
-  publisher="Springer Nature Switzerland",
-  address="Cham",
-  pages="185--200",
-  isbn="978-3-031-98685-7"
-}
-```
+- STL to English
+  - English phrases for STL structures were done by adapting the existing strucutre that were targetted for LTL
+  - Its likely that what sounds natural for an LTL formula does not map cleanly to an STL formula
+  - Its also likely that some specific patterns that were found in LTL to want specific verbiage would not be wanted in STL or vice versa

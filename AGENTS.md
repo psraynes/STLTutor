@@ -57,8 +57,12 @@ src/                      Main application source
   exerciseprocessor.py    Exercise loading, validation, trace-to-mermaid conversion
   feedbackgenerator.py    Misconception-aware semantic feedback via SPOT
   codebook.py             Misconception enum + mutation rules per misconception
-  ltlnode.py              LTL AST node classes, ANTLR parser entry point
-  ltltoeng.py             LTL formula → English sentence translation
+  ltl/
+    ltlnode.py              LTL AST node classes, ANTLR parser entry point
+    ltltoeng.py             LTL formula → English sentence translation
+  stl/
+    stlnode.py              STL AST node classes, ANTLR parser entry point
+    stltoeng.py             STL formula → English sentence translation
   spotutils.py            Wrapper around the SPOT library (model checking, traces)
   stepper.py              Per-step trace satisfaction logic
   syntacticmutator.py     Random syntactic formula mutation for distractor generation
@@ -149,6 +153,12 @@ Flask-Login manages sessions. The `@login_required` decorator gates most routes.
 - Uses ANTLR4 under the hood. **Never call the ANTLR lexer/parser directly** from app code.
 - The AST supports multiple syntax renderings (classic, pluscal, JS). Conversion happens via `LTLNode.__str__()` with a syntax parameter.
 
+### STL Parsing
+
+- Entry point: `stlnode.parse_stl_string(formula_str)` → returns an `STLNode` tree.
+- Uses ANTLR4 under the hood. **Never call the ANTLR lexer/parser directly** from app code.
+- The AST supports multiple syntax renderings (classic, pluscal, JS). Conversion happens via `STLNode.__str__()` with a syntax parameter.
+
 ### SPOT Integration
 
 - All SPOT calls go through `spotutils.py`. **Never `import spot` in other modules.**
@@ -180,10 +190,11 @@ Flask-Login manages sessions. The `@login_required` decorator gates most routes.
 ### Key Rules
 
 1. **LTL parsing**: Use `ltlnode.parse_ltl_string()`. Not ANTLR directly.
-2. **SPOT calls**: Go through `spotutils.py`. Not `import spot`.
-3. **Database queries**: Functions in `authroutes.py` return **detached SQLAlchemy objects** (see Engineering Debt). Extract scalar values you need before the session closes, or be aware that lazy-loaded attributes will fail. See `ENGINEERING-DEBT.md` for details.
-4. **Exercise JSON**: Validate with `exerciseprocessor.py`. Don't hand-parse.
-5. **Client-side navigation**: The Next button has debounce protection. If you change the exercise template's navigation logic, run the rapid-click E2E tests (`test_exercise_flow.py::TestRapidClickRegression`).
+2. **STL parsing**: Use `stlnode.parse_stl_string()`. Not ANTLR directly.
+3. **SPOT calls**: Go through `spotutils.py`. Not `import spot`.
+4. **Database queries**: Functions in `authroutes.py` return **detached SQLAlchemy objects** (see Engineering Debt). Extract scalar values you need before the session closes, or be aware that lazy-loaded attributes will fail. See `ENGINEERING-DEBT.md` for details.
+5. **Exercise JSON**: Validate with `exerciseprocessor.py`. Don't hand-parse.
+6. **Client-side navigation**: The Next button has debounce protection. If you change the exercise template's navigation logic, run the rapid-click E2E tests (`test_exercise_flow.py::TestRapidClickRegression`).
 
 ---
 
